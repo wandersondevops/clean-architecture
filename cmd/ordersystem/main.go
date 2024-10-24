@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"sync"
 
+	"log"
+	"time"
+
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/devfullcycle/20-CleanArch/configs"
@@ -38,21 +41,27 @@ func main() {
 	}
 	defer db.Close()
 
+	fmt.Printf("Database connection: %+v\n", db)
+
 	// Initialize the repository
 	orderRepo := database.NewOrderRepository(db)
 
+	fmt.Printf("orderRepo: %+v\n", orderRepo)
+
 	// Event dispatcher and order created event
 	rabbitMQChannel := getRabbitMQChannel()
+	orderCreatedEvent := events.NewOrderCreatedEvent()
 	eventDispatcher := events.NewEventDispatcher()
 	eventDispatcher.Register("OrderCreated", &handler.OrderCreatedHandler{
 		RabbitMQChannel: rabbitMQChannel,
 	})
 
-	orderCreatedEvent := events.NewOrderCreatedEvent()
-
 	// Initialize use cases
 	createOrderUseCase := usecase.NewCreateOrderUseCase(orderRepo, orderCreatedEvent, eventDispatcher)
 	listOrdersUseCase := usecase.NewListOrdersUseCase(orderRepo)
+
+	log.Printf("Creating OrderService with CreateOrderUseCase: %+v", createOrderUseCase)
+	log.Printf("Creating CreateOrderUseCase with OrderRepository: %+v", orderRepo)
 
 	// Initialize Web Server and Handlers
 	webOrderHandler := web.NewWebOrderHandler(eventDispatcher, orderRepo, orderCreatedEvent)
@@ -82,6 +91,8 @@ func main() {
 		}
 		grpcServer := grpc.NewServer()
 		createOrderService := service.NewOrderService(*createOrderUseCase)
+		log.Printf("Creating CreateOrderUseCase with OrderRepository: %+v", orderRepo)
+		log.Printf("Creating OrderService with CreateOrderUseCase: %+v", createOrderUseCase)
 		pb.RegisterOrderServiceServer(grpcServer, createOrderService)
 		reflection.Register(grpcServer)
 		if err := grpcServer.Serve(lis); err != nil {
@@ -112,7 +123,7 @@ func main() {
 }
 
 func getRabbitMQChannel() *amqp.Channel {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	conn, err := connectRabbitMQ()
 	if err != nil {
 		panic(err)
 	}
@@ -121,4 +132,24 @@ func getRabbitMQChannel() *amqp.Channel {
 		panic(err)
 	}
 	return ch
+}
+
+func connectRabbitMQ() (*amqp.Connection, error) {
+	// Attempt connection retries
+	var conn *amqp.Connection
+	var err error
+
+	rabbitMQURL := "amqp://guest:guest@rabbitmq:5672/" // Update the host to `rabbitmq` service name
+
+	for i := 0; i < 5; i++ { // Retry up to 5 times
+		conn, err = amqp.Dial(rabbitMQURL)
+		if err == nil {
+			return conn, nil
+		}
+
+		log.Printf("Failed to connect to RabbitMQ (attempt %d): %v", i+1, err)
+		time.Sleep(5 * time.Second) // Wait before retrying
+	}
+
+	return nil, fmt.Errorf("could not connect to RabbitMQ: %v", err)
 }

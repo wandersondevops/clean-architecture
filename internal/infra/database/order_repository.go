@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/devfullcycle/20-CleanArch/internal/entity"
 )
@@ -15,6 +16,8 @@ func NewOrderRepository(db *sql.DB) *OrderRepository {
 }
 
 func (r *OrderRepository) Save(order *entity.Order) error {
+	fmt.Printf("Saving order: %+v to repository: %+v\n", order, r.Db) // Add this debug line
+
 	stmt, err := r.Db.Prepare("INSERT INTO orders (id, price, tax, final_price) VALUES (?, ?, ?, ?)")
 	if err != nil {
 		return err
@@ -58,3 +61,5 @@ func (r *OrderRepository) FindAll() ([]*entity.Order, error) {
 
 	return orders, nil
 }
+
+var _ entity.OrderRepositoryInterface = (*OrderRepository)(nil)

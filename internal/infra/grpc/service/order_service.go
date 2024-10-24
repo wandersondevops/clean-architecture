@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log"
 
 	"github.com/devfullcycle/20-CleanArch/internal/entity"
 	"github.com/devfullcycle/20-CleanArch/internal/infra/grpc/pb"
@@ -16,11 +17,14 @@ type OrderService struct {
 
 func NewOrderService(createOrderUseCase usecase.CreateOrderUseCase) *OrderService {
 	return &OrderService{
-		OrderRepository: createOrderUseCase.OrderRepository,
+		CreateOrderUseCase: createOrderUseCase,
+		OrderRepository:    createOrderUseCase.OrderRepository,
 	}
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, in *pb.CreateOrderRequest) (*pb.CreateOrderResponse, error) {
+	log.Printf("Executing CreateOrderUseCase with repository: %+v", s.CreateOrderUseCase.OrderRepository)
+
 	dto := usecase.OrderInputDTO{
 		ID:    in.Id,
 		Price: float64(in.Price),

@@ -1,6 +1,10 @@
 package configs
 
-import "github.com/spf13/viper"
+import (
+	"github.com/spf13/viper"
+
+	_ "github.com/go-sql-driver/mysql" // Importa o driver MySQL
+)
 
 type conf struct {
 	DBDriver          string `mapstructure:"DB_DRIVER"`
