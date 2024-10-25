@@ -79,13 +79,6 @@ docker compose up --build
 - Start the gRPC server on port 50051
 - Start the GraphQL API on port 8080
 
-### Applying Database Migrations
-To run the MySQL database migrations, use the migrate tool:
-
-```bash
-migrate -path ./internal/infra/database/migrations -database "mysql://root:root@tcp(localhost:3306)/orders" up
-```
-
 ### Testing the Web Servers
 
 #### REST API (Port 8000)
@@ -101,14 +94,25 @@ curl -X POST http://localhost:8000/order -H "Content-Type: application/json" -d 
 }'
 ```
 
-#### List Orders (GET /orders):
+##### List Orders (GET /orders):
 
 ```bash
-curl http://localhost:8000/orders
-gRPC Service (Port 50051)
+curl -X GET http://localhost:8000/orders
 ```
 
 #### You can test the gRPC service using grpcurl:
+
+##### Create an Order (POST /order):
+
+```bash
+grpcurl -plaintext -d '{
+  "id": "order1",
+  "price": 100.5,
+  "tax": 10.5
+}' localhost:50051 pb.OrderService/CreateOrder
+```
+
+##### List Orders (GET /orders):
 
 ```bash
 grpcurl -plaintext -d '{}' localhost:50051 pb.OrderService/ListOrders
@@ -120,6 +124,7 @@ You can access the GraphQL playground at http://localhost:8080.
 
 - List Orders:
 
+```bash
 query {
   listOrders {
     id
@@ -128,14 +133,17 @@ query {
     finalPrice
   }
 }
+```
 
 - Create an Order:
 
+```bash
 mutation {
-  createOrder(input: { id: "order2", price: 150.75, tax: 15.50 }) {
+  createOrder(input: { id: "order1", price: 150.75, tax: 15.50 }) {
     id
     price
     tax
     finalPrice
   }
 }
+```
