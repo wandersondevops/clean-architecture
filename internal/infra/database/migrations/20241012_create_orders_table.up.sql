@@ -1,4 +1,4 @@
--- Up Migration (create table)
+-- Create the orders table
 CREATE TABLE orders (
     id VARCHAR(255) PRIMARY KEY,
     price DECIMAL(10, 2) NOT NULL,
